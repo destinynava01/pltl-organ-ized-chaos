@@ -150,7 +150,7 @@ export default function Lobby({ onStart, onOpenBoard, hasGame, resume, onCloseGa
                 <div className="mt-2 grid grid-cols-3 gap-2">
                   {(catalog?.per_system ?? [2, 3, 4]).map((n) => <button key={n} type="button" className={`${choice(perSystem === n)} text-center`} onClick={() => setPerSystem(n)}>{n}</button>)}
                 </div>
-                <p className="mt-1 text-xs text-muted">Every team&apos;s patient has {organCount} organs to put back.</p>
+                <p className="mt-1 text-xs text-muted">Every team&apos;s patient has {level === 3 ? 'about ' : ''}{organCount} organs to put back.</p>
                 {enoughSystems < systemCount && <p className="mt-1 text-xs font-bold text-bad">Only {enoughSystems} systems have {perSystem} organs so far. Pick fewer, or add organs on the Submit page.</p>}
               </div>
 
