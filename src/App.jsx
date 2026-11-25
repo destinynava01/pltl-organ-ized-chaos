@@ -78,8 +78,9 @@ function LeaderApp() {
       <CenterCard title={SITE_NAME}>
         <p className="mt-2 font-display text-lg text-info">{SITE_TAGLINE}</p>
         <p className="mt-3 text-muted">
-          Every team gets a patient whose organs are all mixed up. The organs are dealt to their phones as cards;
-          students put each one back in the right body system. Wrong system? Rejected, and the patient&apos;s vitals drop.
+          Every team gets a patient whose organs are all mixed up, dealt to their phones as cards. Rebuild it one body
+          system at a time, like a puzzle: play the cards that belong to the current system. Wrong card? Rejected, and
+          the patient&apos;s vitals drop.
         </p>
         <Button className="mt-6" onClick={() => setScreen('lobby')}>🚑 Open the lobby</Button>
         <a href={HUB_URL} className="mt-4 block text-sm font-bold text-info hover:brightness-125">← All games</a>
