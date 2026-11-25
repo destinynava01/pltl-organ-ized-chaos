@@ -26,5 +26,5 @@ export const systemInfo = (idOrName) => SYSTEMS.find((s) => s.id === idOrName ||
 export const LEVELS = [
   { id: 1, name: 'Names', text: 'Cards show the organ\'s name ("Liver").' },
   { id: 2, name: 'Functions', text: 'Cards show only what it does ("Makes bile and removes toxins").' },
-  { id: 3, name: 'Functions + double duty', text: 'Functions, plus organs in two systems (like the pancreas). Placing those in both earns a bonus.' },
+  { id: 3, name: 'Functions + double duty', text: 'Functions, plus organs in two systems (like the pancreas), which are needed in both.' },
 ]

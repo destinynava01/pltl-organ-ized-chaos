@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { ocGame, watchGame } from './api'
-import { HUB_URL, LEVELS, MAX_TEAMS, MIN_TEAMS, SITE_NAME, SYSTEMS, TEAM_COLORS } from './config'
+import { HUB_URL, LEVELS, MAX_TEAMS, MIN_TEAMS, SITE_NAME, TEAM_COLORS } from './config'
 import { saveSession } from './session'
 import { Button, ChaosTitle, Label, Panel } from './ui'
 
 const choice = (on) =>
   `rounded-2xl border px-3 py-2 text-left text-sm font-semibold transition ${on ? 'border-accent bg-accent-soft text-accent' : 'border-line bg-panel hover:bg-hover'}`
 
-// Leader lobby: create the game -> teams -> finalize -> level, body systems, organs per system -> start.
+// Leader lobby: create the game -> teams -> finalize -> level, how many body systems, organs per system -> start.
+// The systems themselves are drawn at random when the game starts, in a random order.
 // Students join from their phones; the leader puts them on teams. A team of one works.
 export default function Lobby({ onStart, onOpenBoard, hasGame, resume, onCloseGame }) {
   const [session, setSession] = useState(resume?.session ?? null)
@@ -16,8 +17,8 @@ export default function Lobby({ onStart, onOpenBoard, hasGame, resume, onCloseGa
   const [finalized, setFinalized] = useState(Boolean(resume?.finalized))
   const [catalog, setCatalog] = useState(null)
   const [level, setLevel] = useState(1)
-  const [systems, setSystems] = useState(SYSTEMS.map((s) => s.id))
-  const [perSystem, setPerSystem] = useState(2)
+  const [systemCount, setSystemCount] = useState(4)
+  const [perSystem, setPerSystem] = useState(3)
   const [players, setPlayers] = useState([])
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
@@ -40,8 +41,8 @@ export default function Lobby({ onStart, onOpenBoard, hasGame, resume, onCloseGa
   const waiting = players.filter((p) => p.approval_status === 'pending')
   const sizes = teamNames.map((_, i) => players.filter((p) => p.approval_status === 'approved' && p.team_index === i).length)
   const emptyTeams = teamNames.map((_, i) => i).filter((i) => sizes[i] === 0)
-  const countFor = (id) => catalog?.systems.find((s) => s.id === id)?.organs ?? 0
-  const organCount = systems.reduce((n, id) => n + Math.min(perSystem, countFor(id)), 0) + (level === 3 ? Math.max(1, Math.min(4, Math.ceil(systems.length / 3))) : 0)
+  const organCount = systemCount * perSystem + (level === 3 ? Math.min(3, Math.max(1, Math.floor(systemCount / 2))) : 0)
+  const enoughSystems = catalog ? catalog.systems.filter((s) => s.organs >= perSystem).length : 11
 
   const create = () => run(async () => {
     const d = await ocGame({ action: 'create_game' })
@@ -52,7 +53,7 @@ export default function Lobby({ onStart, onOpenBoard, hasGame, resume, onCloseGa
   const finalize = () => run(async () => { await call({ action: 'set_teams', team_names: teamNames.map((_, i) => teamLabel(i)) }); setFinalized(true) })
   const studentAction = (payload) => run(async () => { await call(payload); setPlayers((await call({ action: 'list_players' })).players) })
   const start = () => run(async () => {
-    await call({ action: 'start_game', team_names: teamNames.map((_, i) => teamLabel(i)), level, systems, per_system: perSystem })
+    await call({ action: 'start_game', team_names: teamNames.map((_, i) => teamLabel(i)), level, system_count: systemCount, per_system: perSystem })
     onStart(session)
   })
 
@@ -95,9 +96,9 @@ export default function Lobby({ onStart, onOpenBoard, hasGame, resume, onCloseGa
           <div className="mt-6 rounded-2xl border border-dashed border-line p-4 text-sm text-muted">
             <p className="font-bold text-ink">How it works</p>
             <ol className="mt-2 list-decimal space-y-1 pl-5">
-              <li>Every team gets the same patient, whose organs are all mixed up. The organs are dealt to the team&apos;s phones as cards.</li>
-              <li>Students talk it over and put each card in the body system it belongs to.</li>
-              <li>A wrong system is a rejection: the card comes back and the patient&apos;s vitals drop. Rebuild the patient first, with the best vitals, to win.</li>
+              <li>Every team gets the same patient, whose organs are all mixed up. They&apos;re dealt to the team&apos;s phones as cards.</li>
+              <li>The patient is rebuilt one body system at a time, like a puzzle (say Skeletal, then Cardiovascular, then Nervous). Students find the cards that belong to the current system and play them.</li>
+              <li>A card that doesn&apos;t belong is a rejection: it stays in hand and the patient&apos;s vitals drop. Rebuild the whole patient first, with the best vitals, to win.</li>
             </ol>
           </div>
         </Panel>
@@ -137,37 +138,25 @@ export default function Lobby({ onStart, onOpenBoard, hasGame, resume, onCloseGa
               </div>
 
               <div>
-                <div className="flex items-baseline justify-between">
-                  <Label>2. Body systems</Label>
-                  <span className="flex gap-3 text-xs font-bold">
-                    <button type="button" className="text-info" onClick={() => setSystems(SYSTEMS.map((s) => s.id))}>All</button>
-                    <button type="button" className="text-info" onClick={() => setSystems([])}>None</button>
-                  </span>
+                <Label>2. How many body systems</Label>
+                <div className="mt-2 grid grid-cols-4 gap-2">
+                  {(catalog?.system_counts ?? [3, 4, 5, 6]).map((n) => <button key={n} type="button" className={`${choice(systemCount === n)} text-center`} onClick={() => setSystemCount(n)}>{n}</button>)}
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-1.5">
-                  {SYSTEMS.map((s) => {
-                    const on = systems.includes(s.id)
-                    return (
-                      <button key={s.id} type="button" className={choice(on)}
-                        onClick={() => setSystems(on ? systems.filter((x) => x !== s.id) : SYSTEMS.map((x) => x.id).filter((x) => x === s.id || systems.includes(x)))}>
-                        {s.emoji} {s.name} <span className="text-xs font-normal text-muted">({countFor(s.id)})</span>
-                      </button>
-                    )
-                  })}
-                </div>
+                <p className="mt-1 text-xs text-muted">Drawn at random when the game starts, in a random order (the same for every team). Each one is revealed when the one before it is complete.</p>
               </div>
 
               <div>
                 <Label>3. Organs per system</Label>
                 <div className="mt-2 grid grid-cols-3 gap-2">
-                  {[1, 2, 3].map((n) => <button key={n} type="button" className={`${choice(perSystem === n)} text-center`} onClick={() => setPerSystem(n)}>{n}</button>)}
+                  {(catalog?.per_system ?? [2, 3, 4]).map((n) => <button key={n} type="button" className={`${choice(perSystem === n)} text-center`} onClick={() => setPerSystem(n)}>{n}</button>)}
                 </div>
-                <p className="mt-1 text-xs text-muted">Every team&apos;s patient has about {organCount} organs to put back.</p>
+                <p className="mt-1 text-xs text-muted">Every team&apos;s patient has {organCount} organs to put back.</p>
+                {enoughSystems < systemCount && <p className="mt-1 text-xs font-bold text-bad">Only {enoughSystems} systems have {perSystem} organs so far. Pick fewer, or add organs on the Submit page.</p>}
               </div>
 
               {emptyTeams.length > 0 && <p className="text-sm font-bold text-bad">Every team needs at least one student. Still empty: {emptyTeams.map(teamLabel).join(', ')}.</p>}
-              <Button className="w-full" disabled={busy || systems.length < 2 || emptyTeams.length > 0} onClick={start}>
-                {busy ? 'Starting…' : systems.length < 2 ? 'Pick at least two systems' : `🚑 Start the chaos (${organCount} organs)`}
+              <Button className="w-full" disabled={busy || emptyTeams.length > 0 || enoughSystems < systemCount} onClick={start}>
+                {busy ? 'Starting…' : `🚑 Start the chaos (${systemCount} systems, ${organCount} organs)`}
               </Button>
             </div>
           )}

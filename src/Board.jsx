@@ -7,10 +7,11 @@ import { LEVELS, SITE_NAME, systemInfo } from './config'
 import { playBonus, playFinish, playPlace, playReject, setSoundOn, soundOn } from './sounds'
 import { Button, ChaosTitle, Monitor } from './ui'
 
-// The projector: every team's patient. Each body system fills up as its organs come back; a rejection shakes the
-// team's monitor and drops its vitals. The game ends on its own once every patient is rebuilt. Every team rebuilds
-// the same organs, so the projector shows how full each system is, not WHICH organs (no copying); the results
-// show the answer key.
+// The projector: every team's patient, rebuilt one body system at a time. Each team's path shows the systems it has
+// finished, the one it's on now (filling up as cards come in), and "?" for the ones still to come. A rejection
+// shakes the team's card and drops its vitals. Every team rebuilds the same organs, so the projector shows how full
+// a system is, not WHICH organs (no copying); the results show the answer key. The game ends on its own once every
+// patient is rebuilt.
 export default function Board({ session, onLobby, onNewGame }) {
   const [board, setBoard] = useState(null)
   const [error, setError] = useState('')
@@ -20,7 +21,7 @@ export default function Board({ session, onLobby, onNewGame }) {
 
   const call = useCallback((payload) => ocGame({ ...payload, game_id: session.gameId, host_token: session.hostToken }), [session])
 
-  // One sound per update, the biggest news first: a patient rebuilt, a rejection, a bonus, an organ placed
+  // One sound per update, the biggest news first: a patient rebuilt, a rejection, a system complete, an organ placed
   const listen = (d) => {
     const now = new Map(d.teams.map((t) => [t.index, t.patient?.last_event ?? null]))
     if (last.current) {
@@ -31,7 +32,7 @@ export default function Board({ session, onLobby, onNewGame }) {
       }
       if (kinds.has('finish')) playFinish()
       else if (kinds.has('reject')) playReject()
-      else if (kinds.has('bonus')) playBonus()
+      else if (kinds.has('system')) playBonus()
       else if (kinds.has('place')) playPlace()
     }
     last.current = now
@@ -62,7 +63,7 @@ export default function Board({ session, onLobby, onNewGame }) {
         <div>
           <p className="font-display text-sm uppercase tracking-[0.3em] text-info">join code {session.joinCode}</p>
           <h1 className="font-display text-4xl font-bold text-accent">🚑 <ChaosTitle text={SITE_NAME} /></h1>
-          <p className="text-sm text-muted">Level {level?.id}: {level?.name} · {board.game.organs} organs per patient · {board.game.systems.length} body systems</p>
+          <p className="text-sm text-muted">Level {level?.id}: {level?.name} · {board.game.stages} body systems, one at a time · {board.game.organs} organs per patient</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {board.waiting > 0 && <Button variant="chaos" className="!px-4 !py-2 text-sm" onClick={onLobby}>{board.waiting} waiting to join</Button>}
@@ -90,6 +91,7 @@ function PatientCard({ team, serverNow }) {
   const fresh = event && serverNow - Date.parse(event.at) < 6000
   const rejected = fresh && event.kind === 'reject'
   const medal = ['🥇', '🥈', '🥉']
+  const now = p.current ? systemInfo(p.current.id) : null
   return (
     <article className={`soft-shadow overflow-hidden rounded-3xl border bg-card ${rejected ? 'reject alarm border-bad' : 'border-line'}`} key={rejected ? event.at : 'card'}>
       <div className="flex items-center justify-between gap-3 px-5 py-3" style={{ borderBottom: `4px solid ${team.color}` }}>
@@ -104,42 +106,53 @@ function PatientCard({ team, serverNow }) {
       </div>
 
       <div className="grid gap-4 p-5 sm:grid-cols-[13rem_1fr]">
-        <div className="space-y-3">
+        <div className="space-y-2">
           <Monitor vitals={p.vitals} />
-          <div>
-            <div className="flex justify-between text-sm font-semibold"><span>Organs back</span><span>{p.placed}/{p.total}</span></div>
-            <div className="mt-1 h-3 overflow-hidden rounded-full bg-panel"><div className="h-full rounded-full bg-accent transition-all" style={{ width: `${(100 * p.placed) / p.total}%` }} /></div>
-          </div>
-          <p className="text-sm text-muted">🚨 {p.rejections} rejection{p.rejections === 1 ? '' : 's'}{p.bonuses_open ? ` · ⭐ ${p.bonuses_open} bonus card${p.bonuses_open === 1 ? '' : 's'} out` : ''}</p>
-          {p.finished && <p className="pop rounded-2xl bg-ok-soft px-3 py-2 text-center font-display text-lg font-bold text-ok">{medal[p.finish_rank - 1] ?? '✅'} Patient rebuilt!</p>}
+          <p className="text-sm text-muted">🚨 {p.rejections} rejection{p.rejections === 1 ? '' : 's'} · {p.stage}/{p.stages} systems done</p>
         </div>
 
-        <ul className="grid grid-cols-2 gap-1.5 self-start sm:grid-cols-3">
-          {p.systems.map((s) => {
-            const info = systemInfo(s.id)
-            const full = s.expected > 0 && s.organs.length >= s.expected
-            return (
-              <li key={s.id} className={`rounded-xl border px-2 py-1.5 ${full ? 'border-ok bg-ok-soft' : 'border-line bg-panel'}`}>
-                <p className="flex items-center justify-between gap-1 text-xs font-bold" style={{ color: info.color }}>
-                  <span className="truncate">{info.emoji} {s.name}</span>
-                  <span className="shrink-0 text-muted">{s.organs.length}/{s.expected}</span>
-                </p>
-                <div className="mt-1 flex flex-wrap gap-1" aria-label={`${s.organs.length} of ${s.expected} organs back`}>
-                  {Array.from({ length: Math.max(s.expected, s.organs.length) }, (_, k) => (
-                    <span key={k} className={`h-3 w-5 rounded-full ${k < s.organs.length ? 'pop' : 'border border-dashed border-line bg-card'}`} style={k < s.organs.length ? { background: info.color } : undefined} />
-                  ))}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
+        <div>
+          {/* Now rebuilding: the current system, filling up */}
+          {p.finished ? (
+            <p className="pop rounded-2xl bg-ok-soft px-4 py-5 text-center font-display text-2xl font-bold text-ok">{medal[p.finish_rank - 1] ?? '✅'} Patient rebuilt!</p>
+          ) : now && (
+            <div className="rounded-2xl border-2 px-4 py-3" style={{ borderColor: now.color }}>
+              <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-muted">Now rebuilding</p>
+              <p className="font-display text-3xl font-bold" style={{ color: now.color }}>{now.emoji} {p.current.name}</p>
+              <div className="mt-2 flex flex-wrap gap-1.5" aria-label={`${p.current.placed} of ${p.current.total} organs in`}>
+                {Array.from({ length: p.current.total }, (_, k) => (
+                  <span key={k} className={`h-4 w-8 rounded-full ${k < p.current.placed ? 'pop' : 'border-2 border-dashed border-line'}`} style={k < p.current.placed ? { background: now.color } : undefined} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* The path: done, now, and still to come */}
+          <ol className="mt-3 flex flex-wrap items-center gap-1.5">
+            {p.systems.map((s, i) => {
+              const info = s.id ? systemInfo(s.id) : null
+              return (
+                <li key={i} className="flex items-center gap-1.5">
+                  {i > 0 && <span className="text-muted">→</span>}
+                  {s.done ? (
+                    <span className="rounded-full px-2.5 py-1 text-xs font-bold text-white" style={{ background: info.color }}>✓ {info.emoji} {s.name}</span>
+                  ) : s.id ? (
+                    <span className="rounded-full border-2 bg-card px-2.5 py-1 text-xs font-bold" style={{ borderColor: info.color, color: info.color }}>{info.emoji} {s.name}</span>
+                  ) : (
+                    <span className="rounded-full border-2 border-dashed border-line px-3 py-1 text-xs font-bold text-muted">?</span>
+                  )}
+                </li>
+              )
+            })}
+          </ol>
+        </div>
       </div>
 
       {fresh && (
-        <p className={`pop mx-5 mb-4 rounded-2xl px-4 py-2 text-sm font-semibold ${event.kind === 'reject' ? 'bg-bad-soft text-bad' : event.kind === 'bonus' ? 'bg-warn-soft text-warn' : 'bg-accent-soft text-accent'}`} key={event.at}>
-          {event.kind === 'reject' && `🚨 Rejected! ${event.by} tried the ${event.system} system. Vitals dropping!`}
+        <p className={`pop mx-5 mb-4 rounded-2xl px-4 py-2 text-sm font-semibold ${event.kind === 'reject' ? 'bg-bad-soft text-bad' : event.kind === 'system' || event.kind === 'finish' ? 'bg-ok-soft text-ok' : 'bg-accent-soft text-accent'}`} key={event.at}>
+          {event.kind === 'reject' && `🚨 Rejected! ${event.by} played a card that isn't ${event.system}. Vitals dropping!`}
           {event.kind === 'place' && `💓 ${event.by} put an organ back in the ${event.system} system`}
-          {event.kind === 'bonus' && `⭐ Bonus! ${event.by} found an organ that does double duty`}
+          {event.kind === 'system' && `✅ ${event.system} system complete! ${p.current ? `Next up: ${p.current.name}` : ''}`}
           {event.kind === 'finish' && `🎉 ${event.by} placed the last organ. The patient is stable!`}
         </p>
       )}

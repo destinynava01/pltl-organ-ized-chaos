@@ -34,7 +34,7 @@ export default function Results({ session, onNewGame, onLobby }) {
       <Panel className="mx-auto max-w-4xl text-center">
         <p className="text-5xl">🏥</p>
         <h1 className="mt-2 font-display text-5xl font-bold text-accent">Discharge Report</h1>
-        <p className="mt-1 text-muted">Level {report.level} · {report.systems.join(' · ')}</p>
+        <p className="mt-1 text-muted">Level {report.level} · rebuilt in this order: {report.systems.join(' → ')}</p>
 
         <ol className="mx-auto mt-6 max-w-xl space-y-3 text-left">
           {ranked.map((t, i) => (
@@ -44,7 +44,7 @@ export default function Results({ session, onNewGame, onLobby }) {
                 <p className="font-display text-3xl font-bold text-accent">{t.points}</p>
               </div>
               <p className="mt-1 text-sm text-muted">
-                {t.finish_rank ? `Rebuilt ${['1st', '2nd', '3rd'][t.finish_rank - 1] ?? `#${t.finish_rank}`}` : `${t.placed}/${t.total} organs back`} · vitals {t.vitals}% · {t.rejections} rejection{t.rejections === 1 ? '' : 's'}{t.bonuses ? ` · ⭐ ${t.bonuses} bonus${t.bonuses === 1 ? '' : 'es'}` : ''}
+                {t.finish_rank ? `Rebuilt ${['1st', '2nd', '3rd'][t.finish_rank - 1] ?? `#${t.finish_rank}`}` : `${t.systems_done}/${t.stages} systems rebuilt`} · vitals {t.vitals}% · {t.rejections} rejection{t.rejections === 1 ? '' : 's'}
               </p>
             </li>
           ))}

@@ -9,18 +9,10 @@ function Phone({ children }) {
 function Card({ children, bonus = false }) {
   return <div className={`rounded-2xl border-2 bg-card p-3 text-left ${bonus ? 'border-warn' : 'border-accent'}`}>{children}</div>
 }
-function SystemButton({ emoji, name, color, picked = false }) {
-  return (
-    <div className={`flex items-center gap-1.5 rounded-xl border-2 bg-panel px-2 py-1.5 text-sm font-display font-semibold ${picked ? 'ring-4 ring-accent/40' : ''}`} style={{ borderColor: color }}>
-      <span className="text-lg">{emoji}</span>{name}
-    </div>
-  )
-}
-
 export const SLIDES = [
   {
     title: 'The patient is a mess',
-    text: 'Every team gets the same patient, and all of its organs got mixed up. Your job: put every organ back in the right body system before the other teams do.',
+    text: 'Every team gets the same patient, and all of its organs got mixed up. Your job: rebuild it, one body system at a time, before the other teams do.',
     art: (
       <div className="w-full max-w-xs space-y-3">
         <Monitor vitals={100} label="YOUR PATIENT" />
@@ -32,7 +24,7 @@ export const SLIDES = [
   },
   {
     title: 'Organ cards on your phone',
-    text: 'The organs are dealt to your team\'s phones. Only you see your cards. Level 1 cards show the organ\'s name; levels 2 and 3 show only what it does.',
+    text: 'The organs, from every system in the game, are dealt at random to your team\'s phones. Only you see your cards. Level 1 cards show the organ\'s name; levels 2 and 3 show only what it does.',
     art: (
       <Phone>
         <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-info">Your cards</p>
@@ -44,27 +36,28 @@ export const SLIDES = [
     ),
   },
   {
-    title: 'Pick its body system',
-    text: 'Talk it over with your team, tap a card, then tap the system it belongs to. Right system: the organ is back in the patient. Teams don\'t take turns; anyone can play any time.',
+    title: 'One system at a time',
+    text: 'Your phone shows the system your team is rebuilding now (say, Skeletal). Find the cards that belong to it and play them; keep the rest for later. When it\'s complete, the next system is revealed.',
     art: (
       <Phone>
-        <p className="font-display text-xs font-semibold uppercase tracking-[0.2em] text-info">Which body system?</p>
-        <p className="font-display text-xl font-semibold">Liver</p>
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          <SystemButton emoji="❤️" name="Cardio" color="#e11d48" />
-          <SystemButton emoji="🍽️" name="Digestive" color="#ca8a04" picked />
-          <SystemButton emoji="🫁" name="Respiratory" color="#2563eb" />
-          <SystemButton emoji="💧" name="Urinary" color="#0284c7" />
+        <div className="rounded-2xl border-2 bg-card p-2" style={{ borderColor: '#78716c' }}>
+          <p className="font-display text-[0.65rem] font-semibold uppercase tracking-[0.2em] text-info">Now rebuilding · system 1 of 4</p>
+          <p className="font-display text-xl font-bold" style={{ color: '#78716c' }}>🦴 Skeletal</p>
+          <p className="text-xs text-muted">Still to come: ? ? ?</p>
+        </div>
+        <div className="mt-2 space-y-1.5">
+          <Card><p className="font-display text-lg font-semibold">Femur</p><p className="mt-1 rounded-lg py-1 text-center text-sm font-semibold text-white" style={{ background: '#78716c' }}>🦴 Play into Skeletal</p></Card>
+          <Card><p className="font-display text-lg font-semibold">Liver</p><p className="text-xs text-muted">(not this one: wait for its system)</p></Card>
         </div>
       </Phone>
     ),
   },
   {
     title: 'Wrong system? Rejected!',
-    text: 'A wrong system is a rejection: the card comes back to you and your patient\'s vitals drop. Miss the same card twice and it shows a hint (the name, or what it does).',
+    text: 'Play a card that doesn\'t belong to the current system and it\'s a rejection: the card stays in your hand and your patient\'s vitals drop. Miss the same card twice and it shows a hint (the name, or what it does).',
     art: (
       <div className="w-full max-w-xs space-y-3">
-        <p className="reject rounded-2xl bg-bad-soft px-4 py-3 font-semibold text-bad">🚨 Rejected! Not the Respiratory system. Vitals 80%.</p>
+        <p className="reject rounded-2xl bg-bad-soft px-4 py-3 font-semibold text-bad">🚨 Rejected! That one isn&apos;t part of the Respiratory system. Vitals 80%.</p>
         <Monitor vitals={80} label="YOUR PATIENT" />
         <Card><p className="text-sm font-semibold">Makes bile and removes toxins from the blood</p><p className="mt-1 text-sm text-info">💡 It&apos;s the: Liver</p></Card>
       </div>
@@ -72,24 +65,20 @@ export const SLIDES = [
   },
   {
     title: 'Level 3: double duty',
-    text: 'Some organs belong to two systems, like the pancreas (digestive AND endocrine). Either one counts. Then the card stays in your hand: place it in its other system for a bonus.',
+    text: 'Some organs belong to two systems, like the pancreas (digestive AND endocrine), and the patient needs them in both. Play it when the first of its systems comes up; it stays in your hand until the other one does.',
     art: (
       <Phone>
         <Card bonus>
-          <p className="text-xs font-semibold uppercase tracking-widest text-warn">⭐ Bonus card · already in Digestive</p>
+          <p className="text-xs font-semibold uppercase tracking-widest text-warn">⭐ Double duty · already in Digestive</p>
           <p className="text-sm font-semibold">Releases insulin to control blood sugar, and enzymes that digest food</p>
-          <p className="text-xs font-semibold uppercase tracking-widest text-accent">Tap: which OTHER system?</p>
+          <p className="mt-1 rounded-lg py-1 text-center text-sm font-semibold text-white" style={{ background: '#7c3aed' }}>🧪 Play into Endocrine</p>
         </Card>
-        <div className="mt-2 grid grid-cols-2 gap-1.5">
-          <SystemButton emoji="🧪" name="Endocrine" color="#7c3aed" picked />
-          <SystemButton emoji="🧠" name="Nervous" color="#db2777" />
-        </div>
       </Phone>
     ),
   },
   {
     title: 'Stabilize your patient first',
-    text: 'Every organ back = 10 points, a bonus = 15. Rebuild your patient first for a big finish bonus, plus the vitals you have left. Fewer rejections, more points!',
+    text: 'Every organ back = 10 points; every system completed = 25. Rebuild the whole patient first for a big finish bonus, plus the vitals you have left. Fewer rejections, more points!',
     art: (
       <div className="w-64 space-y-2">
         {[['🥇 Team 2', 290, '#16a34a'], ['🥈 Team 1', 245, '#2563eb']].map(([n, p, c]) => (
