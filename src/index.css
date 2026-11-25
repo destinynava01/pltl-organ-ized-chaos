@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/*
+  The look: a busy ER. Clean scrub-mint walls and white cards, dark patient monitors with a green heartbeat line,
+  pulse red for rejections, and a playful chaos purple. Every color the screens use is one of these tokens.
+*/
+@theme {
+  --color-board: #e8f3f1;      /* scrub-mint walls */
+  --color-card: #ffffff;
+  --color-panel: #f2f8f7;
+  --color-hover: #e1eeec;
+  --color-line: #c6dcd8;
+  --color-ink: #0f2a2e;
+  --color-muted: #557174;
+  --color-accent: #0f8b7d;     /* scrub teal: titles, main buttons */
+  --color-accent-soft: #d4efea;
+  --color-on-accent: #ffffff;
+  --color-info: #6d28d9;       /* chaos purple: labels, links */
+  --color-info-soft: #ede6ff;
+  --color-ok: #15803d;         /* placed */
+  --color-ok-soft: #dcfce7;
+  --color-bad: #e11d48;        /* rejection, the alarm */
+  --color-bad-soft: #ffe4ea;
+  --color-warn: #b45309;       /* bonus */
+  --color-warn-soft: #fef3c7;
+  --color-monitor: #071b1d;    /* patient monitor screen */
+  --color-ecg: #39ff8f;        /* the heartbeat line */
+  --font-display: "Fredoka", system-ui, sans-serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--color-board);
+  color: var(--color-ink);
+}
+
+/* The ER wall: faint medical crosses scattered on scrub mint */
+.er-bg {
+  background-color: var(--color-board);
+  background-image:
+    radial-gradient(ellipse at 15% -10%, rgb(15 139 125 / 0.14), transparent 50%),
+    radial-gradient(ellipse at 90% 110%, rgb(109 40 217 / 0.10), transparent 45%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='96'%3E%3Cpath d='M18 10h6v8h8v6h-8v8h-6v-8h-8v-6h8z' fill='%230f8b7d' fill-opacity='0.08'/%3E%3Cpath d='M68 58h4v6h6v4h-6v6h-4v-6h-6v-4h6z' fill='%236d28d9' fill-opacity='0.07'/%3E%3C/svg%3E");
+  background-attachment: fixed;
+}
+
+.soft-shadow { box-shadow: 0 10px 28px rgb(15 42 46 / 0.10); }
+
+/* A patient monitor: dark glass with a faint grid */
+.monitor {
+  background-color: var(--color-monitor);
+  background-image:
+    linear-gradient(rgb(57 255 143 / 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgb(57 255 143 / 0.06) 1px, transparent 1px);
+  background-size: 14px 14px;
+  box-shadow: inset 0 0 0 2px #0e3337, inset 0 0 24px rgb(0 0 0 / 0.6);
+}
+
+/* The heartbeat line draws itself across the screen, over and over */
+@keyframes ecg-draw {
+  from { stroke-dashoffset: 600; }
+  to { stroke-dashoffset: 0; }
+}
+.ecg-line {
+  stroke-dasharray: 600;
+  animation: ecg-draw var(--beat, 1.6s) linear infinite;
+  filter: drop-shadow(0 0 4px currentColor);
+}
+
+/* A card placed in the patient pops in */
+@keyframes pop {
+  0% { transform: scale(0.6); opacity: 0; }
+  70% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+.pop { animation: pop 0.35s ease-out both; }
+
+/* A rejection: the panel shakes and flashes red */
+@keyframes reject {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(4px); }
+}
+.reject { animation: reject 0.45s ease-in-out; }
+@keyframes alarm {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(225 29 72 / 0); }
+  50% { box-shadow: 0 0 0 6px rgb(225 29 72 / 0.35); }
+}
+.alarm { animation: alarm 0.7s ease-in-out 3; }
+
+/* The title's "chaos": letters tilted every which way */
+.chaos > span { display: inline-block; }
+.chaos > span:nth-child(3n) { transform: rotate(-6deg); }
+.chaos > span:nth-child(3n + 1) { transform: rotate(4deg) translateY(-2px); }
+.chaos > span:nth-child(5n) { transform: rotate(-10deg) translateY(2px); }
+
+@media (prefers-reduced-motion: reduce) {
+  .ecg-line, .pop, .reject, .alarm { animation: none; }
+}
+
+/* Bigger screens (projectors, big monitors): everything a little larger so it reads from the back of the room.
+   Phones and laptops are unchanged. */
+@media (min-width: 1600px) { html { font-size: 106.25%; } }
+@media (min-width: 1900px) { html { font-size: 112.5%; } }
