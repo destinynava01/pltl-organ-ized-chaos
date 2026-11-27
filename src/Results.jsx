@@ -2,10 +2,12 @@ import { useEffect, useState } from 'react'
 import { ocGame } from './api'
 import { systemInfo } from './config'
 import { Button, Label, Panel } from './ui'
+import ReportProblem from './ReportProblem'
 
 // After the game: teams ranked by points, the answer key (the organs the class missed most first), and the
 // results download.
 export default function Results({ session, onNewGame, onLobby }) {
+  const reportCall = (payload) => ocGame({ ...payload, game_id: session.gameId, host_token: session.hostToken })
   const [report, setReport] = useState(null)
   const [error, setError] = useState('')
   const [downloading, setDownloading] = useState(false)
@@ -64,6 +66,7 @@ export default function Results({ session, onNewGame, onLobby }) {
                 </p>
                 <p className="mt-1 text-muted">{k.function}</p>
                 {k.wrong_systems.length > 0 && <p className="mt-1 text-xs font-semibold text-bad">Tried: {k.wrong_systems.join(', ')}</p>}
+                <ReportProblem call={reportCall} location={`Organ card: ${k.name}`} question={k.function} answer={`Body system${k.systems.length > 1 ? 's' : ''}: ${k.systems.join(', ')}`} className="mt-2" />
               </li>
             ))}
           </ul>
