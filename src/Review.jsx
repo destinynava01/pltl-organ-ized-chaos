@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ocReview } from './api'
+import { callFunction, ocReview } from './api'
+import GameReports from './GameReports'
 import { SYSTEMS, systemInfo } from './config'
 import { SignIn, SignInCard } from './SignIn'
 import { supabase } from './supabase'
@@ -7,7 +8,9 @@ import { useSession } from './useSession'
 import { Button } from './ui'
 
 const field = 'w-full rounded-xl border border-line bg-panel px-3 py-2 text-sm text-ink outline-none focus:border-accent'
-const TABS = [{ id: 'pending', label: 'Waiting' }, { id: 'approved', label: 'Approved' }, { id: 'rejected', label: 'Rejected' }]
+const TABS = [{ id: 'pending', label: 'Waiting' }, { id: 'approved', label: 'Approved' }, { id: 'rejected', label: 'Rejected' }, { id: 'reports', label: '🚩 Problem reports' }]
+// Problem reports go through the shared review function (the same reviewer sign-in)
+const review = (payload, fallback) => callFunction('review', { ...payload, game: 'jeopardy' }, fallback)
 
 // Reviewers: approve, edit or reject submitted organs (same sign-in as the other game sites)
 export default function Review() {
@@ -25,7 +28,7 @@ function Reviewer() {
   const [picked, setPicked] = useState([])
   const [filter, setFilter] = useState('')
 
-  const load = useCallback(() => ocReview({ action: 'list', status: tab }).then((d) => { setData(d); setPicked([]); setError('') }).catch((e) => setError(e.message)), [tab])
+  const load = useCallback(() => (tab === 'reports' ? Promise.resolve() : ocReview({ action: 'list', status: tab })).then((d) => { setData(d); setPicked([]); setError('') }).catch((e) => setError(e.message)), [tab])
   useEffect(() => { ocReview({ action: 'whoami' }).then(setMe).catch((e) => setError(e.message)) }, [])
   useEffect(() => { load() }, [load])
 
@@ -71,7 +74,7 @@ function Reviewer() {
           {TABS.map((t) => (
             <button key={t.id} onClick={() => { setTab(t.id); setMessage('') }}
               className={`rounded-xl border px-4 py-2 text-sm font-bold ${tab === t.id ? 'border-accent bg-accent-soft text-accent' : 'border-line bg-card hover:bg-hover'}`}>
-              {t.label} <span className="ml-1 text-xs opacity-80">{data?.counts?.[t.id]}</span>
+              {t.label} <span className="ml-1 text-xs opacity-80">{t.id === 'reports' ? '' : data?.counts?.[t.id]}</span>
             </button>
           ))}
           <select value={filter} onChange={(e) => setFilter(e.target.value)} className="ml-auto rounded-xl border border-line bg-card px-3 py-2 text-sm font-semibold" aria-label="Show one body system">
@@ -85,13 +88,17 @@ function Reviewer() {
             </>
           )}
         </nav>
-        {message && <p className="mt-3 font-bold text-ok">{message}</p>}
-        {error && <p className="mt-3 font-bold text-bad">{error}</p>}
-        {!data && <p className="mt-6 text-muted">Loading…</p>}
-        {data && list.length === 0 && <p className="mt-6 text-muted">Nothing here.</p>}
-        <ul className="mt-4 grid gap-3 sm:grid-cols-2">
-          {list.map((o) => <OrganCard key={o.id} o={o} picked={picked.includes(o.id)} onPick={() => setPicked((x) => (x.includes(o.id) ? x.filter((y) => y !== o.id) : [...x, o.id]))} tab={tab} act={act} />)}
-        </ul>
+        {tab === 'reports' ? <div className="mt-4"><GameReports call={review} game="organized" /></div> : (
+          <>
+            {message && <p className="mt-3 font-bold text-ok">{message}</p>}
+            {error && <p className="mt-3 font-bold text-bad">{error}</p>}
+            {!data && <p className="mt-6 text-muted">Loading…</p>}
+            {data && list.length === 0 && <p className="mt-6 text-muted">Nothing here.</p>}
+            <ul className="mt-4 grid gap-3 sm:grid-cols-2">
+              {list.map((o) => <OrganCard key={o.id} o={o} picked={picked.includes(o.id)} onPick={() => setPicked((x) => (x.includes(o.id) ? x.filter((y) => y !== o.id) : [...x, o.id]))} tab={tab} act={act} />)}
+            </ul>
+          </>
+        )}
       </div>
     </main>
   )
